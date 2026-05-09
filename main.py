@@ -169,7 +169,10 @@ def main():
         print("Default config generated. Fill it and restart.")
         exit(0)
     bot_config = cfg
-    bot.run(cfg.token)
+    try:
+        bot.run(cfg.token)
+    except disnake.errors.LoginFailure as e:
+        print(f"Failed to login: {e}")
 
 # region yml config
 
