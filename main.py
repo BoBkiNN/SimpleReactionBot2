@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from pathlib import Path
 from io import StringIO
 from typing import Any
+import asyncio
 
 CONFIG_PATH = Path("config.yml")
 
@@ -20,6 +21,8 @@ class Config(BaseModel):
     token: str = Field(description="Your bot token")
     messages: list[MessageConfig] = Field(default_factory=list, description=
                                           "List of messages and their emoji-to-role mappings")
+    add_reactions: bool = Field(default=True, description=
+                                "When set to true, bot will add reactions to messages")
 
 EXAMPLE_CONFIG = Config(
     token="token here",
@@ -38,7 +41,8 @@ EXAMPLE_CONFIG = Config(
                 "<:ogoo:880215419586240572>": 508081607239008329
             }
         )
-    ]
+    ],
+    add_reactions=True
 )
 
 def load_config(file: Path):
@@ -70,9 +74,37 @@ intents = disnake.Intents.default()
 intents.reactions = True
 bot = commands.InteractionBot(intents=intents)
 
+async def _add_msg_reactions(msg: disnake.Message, emojis: list[str]):
+    reacted = [str(r.emoji) for r in msg.reactions if r.me]
+    for emoji in emojis:
+        if emoji in reacted:
+            continue
+        print(f"Adding emoji {emoji!r} to message {msg.id}")
+        try:
+            await msg.add_reaction(emoji)
+        except Exception as e:
+            print(f"Failed to add emoji {emoji!r} to message {msg.id}: {e}")
+    
+
+
+async def add_reactions():
+    print("Adding missing reactions..")
+    msgs = bot_config.messages
+    for msgc in msgs:
+        mid = msgc.message_id
+        print(f"Adding missing reactions to message {mid}")
+        msg = bot.get_message(mid)
+        if not msg:
+            print(f"Message {mid} not found. Cannot add reactions to it.")
+            continue
+        emojis = list(msgc.emoji_to_role.keys())
+        asyncio.create_task(_add_msg_reactions(msg, emojis))
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    if bot_config.add_reactions:
+        asyncio.create_task(add_reactions())
 
 @bot.event
 async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
