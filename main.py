@@ -12,18 +12,21 @@ import logging
 
 CONFIG_PATH = Path("config.yml")
 
+
 class MessageConfig(BaseModel):
     message_id: int = Field(description="Message ID to listen on")
     emoji_to_role: dict[str, int] = Field(description="Mapping of emoji to role ID. \n"
                                           "Emoji can be a unicode emoji or "
                                           "discord emoji id obtained by using \\:emoji:")
 
+
 class Config(BaseModel):
     token: str = Field(description="Your bot token")
-    messages: list[MessageConfig] = Field(default_factory=list, description=
-                                          "List of messages and their emoji-to-role mappings")
-    add_reactions: bool = Field(default=True, description=
-                                "When set to true, bot will add reactions to messages")
+    messages: list[MessageConfig] = Field(
+        default_factory=list, description="List of messages and their emoji-to-role mappings")
+    add_reactions: bool = Field(
+        default=True, description="When set to true, bot will add reactions to messages")
+
 
 EXAMPLE_CONFIG = Config(
     token="token here",
@@ -46,15 +49,18 @@ EXAMPLE_CONFIG = Config(
     add_reactions=True
 )
 
+
 def load_config(file: Path):
     yaml = YAML(typ="safe")
     with file.open(encoding="utf-8") as f:
         d = yaml.load(f)
     return Config.model_validate(d)
 
+
 def save_example_config(file: Path):
     t = model_to_yaml(EXAMPLE_CONFIG)
     file.write_text(t, encoding="utf-8")
+
 
 def setup_config(file: Path) -> Config | None:
     if file.exists():
@@ -62,8 +68,10 @@ def setup_config(file: Path) -> Config | None:
     save_example_config(file)
     return None
 
+
 bot_config: Config
 logger: logging.Logger
+
 
 def get_msg_roles(msg: int):
     for m in bot_config.messages:
@@ -76,6 +84,7 @@ intents = disnake.Intents.default()
 intents.reactions = True
 bot = commands.InteractionBot(intents=intents)
 
+
 async def _add_msg_reactions(msg: disnake.Message, emojis: list[str]):
     reacted = [str(r.emoji) for r in msg.reactions if r.me]
     for emoji in emojis:
@@ -87,7 +96,6 @@ async def _add_msg_reactions(msg: disnake.Message, emojis: list[str]):
         except Exception as e:
             logger.warning(
                 f"Failed to add emoji {emoji!r} to message {msg.id}: {e}")
-    
 
 
 async def add_reactions():
@@ -104,11 +112,13 @@ async def add_reactions():
         emojis = list(msgc.emoji_to_role.keys())
         asyncio.create_task(_add_msg_reactions(msg, emojis))
 
+
 @bot.event
 async def on_ready():
     logger.info(f"Logged in as {bot.user}")
     if bot_config.add_reactions:
         asyncio.create_task(add_reactions())
+
 
 @bot.event
 async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
@@ -121,7 +131,7 @@ async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
     channel = bot.get_channel(payload.channel_id)
     if not channel:
         return
-    message = await channel.fetch_message(payload.message_id) # type: ignore
+    message = await channel.fetch_message(payload.message_id)  # type: ignore
     if not message:
         return
     guild = message.guild
@@ -135,6 +145,7 @@ async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
         return
     await member.add_roles(role, reason=f"Reacted on {message.id}")
     logger.info(f"Given role {rid} to", member.id)
+
 
 @bot.event
 async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
@@ -162,6 +173,7 @@ async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
     await member.remove_roles(role, reason=f"Unreact {message.id}")
     logger.info(f"Revoked role {rid} from", member.id)
 
+
 def _setup_log():
     global logger
     logger = logging.getLogger("SimpleReactionBot2")
@@ -174,6 +186,7 @@ def _setup_log():
     )
 
     logger.addHandler(handler)
+
 
 def main():
     global bot_config
@@ -194,7 +207,9 @@ def main():
 
 # region yml config
 
+
 NON_ASCII_OR_SPECIAL = re.compile(r'[^\x20-\x7E]|[:{}\[\],&*#?|\-<>=!%@`]')
+
 
 class QuotedStringRepresenter(RoundTripRepresenter):
     def represent_str(self, data: str):
@@ -205,6 +220,7 @@ class QuotedStringRepresenter(RoundTripRepresenter):
 
 QuotedStringRepresenter.add_representer(
     str, QuotedStringRepresenter.represent_str)
+
 
 def model_to_yaml(model: BaseModel) -> str:
     yaml = YAML()
@@ -256,7 +272,8 @@ def model_to_yaml(model: BaseModel) -> str:
     yaml.dump(data, stream)
     return stream.getvalue()
 
-#endregion
+# endregion
+
 
 if __name__ == "__main__":
     main()
