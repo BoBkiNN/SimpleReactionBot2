@@ -112,8 +112,9 @@ async def add_reactions():
         if not isinstance(channel, disnake.channel.TextChannel):
             logger.warning(f"Channel {cid} with message {mid} is not a text channel, does not exists, or bot does not have access to it. Cannot add reactions in it.")
             continue
-        msg = await channel.fetch_message(mid)
-        if not msg:
+        try:
+            msg = await channel.fetch_message(mid)
+        except disnake.NotFound:
             logger.warning(
                 f"Message {mid} not found. Cannot add reactions to it.")
             continue
@@ -130,6 +131,8 @@ async def on_ready():
 
 @bot.event
 async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
+    if payload.user_id == bot.user.id:
+        return
     roles = get_msg_roles(payload.message_id)
     if not roles:
         return
@@ -137,10 +140,11 @@ async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
     if rid == None:
         return
     channel = bot.get_channel(payload.channel_id)
-    if not channel:
+    if not isinstance(channel, disnake.channel.TextChannel):
         return
-    message = await channel.fetch_message(payload.message_id)  # type: ignore
-    if not message:
+    try:
+        message = await channel.fetch_message(payload.message_id)
+    except disnake.NotFound:
         return
     guild = message.guild
     if not guild:
@@ -152,11 +156,13 @@ async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
     if member is None:
         return
     await member.add_roles(role, reason=f"Reacted on {message.id}")
-    logger.info(f"Given role {rid} to", member.id)
+    logger.info(f"Given role {rid} to {member.id}")
 
 
 @bot.event
 async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
+    if payload.user_id == bot.user.id:
+        return
     roles = get_msg_roles(payload.message_id)
     if not roles:
         return
@@ -164,10 +170,11 @@ async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
     if rid == None:
         return
     channel = bot.get_channel(payload.channel_id)
-    if not channel:
+    if not isinstance(channel, disnake.channel.TextChannel):
         return
-    message = await channel.fetch_message(payload.message_id)  # type: ignore
-    if not message:
+    try:
+        message = await channel.fetch_message(payload.message_id)
+    except disnake.NotFound:
         return
     guild = message.guild
     if not guild:
@@ -179,7 +186,7 @@ async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
     if member is None:
         return
     await member.remove_roles(role, reason=f"Unreact {message.id}")
-    logger.info(f"Revoked role {rid} from", member.id)
+    logger.info(f"Revoked role {rid} from {member.id}")
 
 
 def _setup_log():
