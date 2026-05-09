@@ -8,6 +8,7 @@ from pathlib import Path
 from io import StringIO
 from typing import Any
 import asyncio
+import logging
 
 CONFIG_PATH = Path("config.yml")
 
@@ -62,6 +63,7 @@ def setup_config(file: Path) -> Config | None:
     return None
 
 bot_config: Config
+logger: logging.Logger
 
 def get_msg_roles(msg: int):
     for m in bot_config.messages:
@@ -79,30 +81,32 @@ async def _add_msg_reactions(msg: disnake.Message, emojis: list[str]):
     for emoji in emojis:
         if emoji in reacted:
             continue
-        print(f"Adding emoji {emoji!r} to message {msg.id}")
+        logger.info(f"Adding emoji {emoji!r} to message {msg.id}")
         try:
             await msg.add_reaction(emoji)
         except Exception as e:
-            print(f"Failed to add emoji {emoji!r} to message {msg.id}: {e}")
+            logger.warning(
+                f"Failed to add emoji {emoji!r} to message {msg.id}: {e}")
     
 
 
 async def add_reactions():
-    print("Adding missing reactions..")
+    logger.info("Adding missing reactions..")
     msgs = bot_config.messages
     for msgc in msgs:
         mid = msgc.message_id
-        print(f"Adding missing reactions to message {mid}")
+        logger.info(f"Adding missing reactions to message {mid}")
         msg = bot.get_message(mid)
         if not msg:
-            print(f"Message {mid} not found. Cannot add reactions to it.")
+            logger.warning(
+                f"Message {mid} not found. Cannot add reactions to it.")
             continue
         emojis = list(msgc.emoji_to_role.keys())
         asyncio.create_task(_add_msg_reactions(msg, emojis))
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    logger.info(f"Logged in as {bot.user}")
     if bot_config.add_reactions:
         asyncio.create_task(add_reactions())
 
@@ -130,7 +134,7 @@ async def on_raw_reaction_add(payload: disnake.RawReactionActionEvent):
     if member is None:
         return
     await member.add_roles(role, reason=f"Reacted on {message.id}")
-    print(f"Given role {rid} to", member.id)
+    logger.info(f"Given role {rid} to", member.id)
 
 @bot.event
 async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
@@ -156,23 +160,37 @@ async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
     if member is None:
         return
     await member.remove_roles(role, reason=f"Unreact {message.id}")
-    print(f"Revoked role {rid} from", member.id)
+    logger.info(f"Revoked role {rid} from", member.id)
+
+def _setup_log():
+    global logger
+    logger = logging.getLogger("SimpleReactionBot2")
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        logging.Formatter(
+            '[%(asctime)s %(levelname)s]: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+    )
+
+    logger.addHandler(handler)
 
 def main():
     global bot_config
+    _setup_log()
     try:
         cfg: Config | None = setup_config(CONFIG_PATH)
     except Exception as e:
-        print("Failed to load config:", e)
+        logger.critical("Failed to load config:", e)
         exit(1)
     if cfg is None:
-        print("Default config generated. Fill it and restart.")
+        logger.info("Default config generated. Fill it and restart.")
         exit(0)
     bot_config = cfg
     try:
         bot.run(cfg.token)
     except disnake.errors.LoginFailure as e:
-        print(f"Failed to login: {e}")
+        logger.critical(f"Failed to login: {e}")
 
 # region yml config
 
