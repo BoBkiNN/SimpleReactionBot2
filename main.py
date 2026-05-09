@@ -177,6 +177,7 @@ async def on_raw_reaction_remove(payload: disnake.RawReactionActionEvent):
 def _setup_log():
     global logger
     logger = logging.getLogger("SimpleReactionBot2")
+    logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
     handler.setFormatter(
         logging.Formatter(
