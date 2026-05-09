@@ -25,7 +25,7 @@ class Config(BaseModel):
     messages: list[MessageConfig] = Field(
         default_factory=list, description="List of messages and their emoji-to-role mappings")
     add_reactions: bool = Field(
-        default=True, description="When set to true, bot will add reactions to messages")
+        default=True, description="When set to true, bot will add missing reactions to messages on startup")
 
 
 EXAMPLE_CONFIG = Config(

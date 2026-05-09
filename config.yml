@@ -14,5 +14,5 @@ messages:
     emoji_to_role:
       "<:khm:880215367425851393>": 208081607239008329
       "<:ogoo:880215419586240572>": 508081607239008329
-# When set to true, bot will add reactions to messages
+# When set to true, bot will add missing reactions to messages on startup
 add_reactions: true
