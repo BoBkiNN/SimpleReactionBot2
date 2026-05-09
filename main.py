@@ -15,6 +15,7 @@ CONFIG_PATH = Path("config.yml")
 
 class MessageConfig(BaseModel):
     message_id: int = Field(description="Message ID to listen on")
+    channel_id: int = Field(description="Channel ID where this message is located")
     emoji_to_role: dict[str, int] = Field(description="Mapping of emoji to role ID. \n"
                                           "Emoji can be a unicode emoji or "
                                           "discord emoji id obtained by using \\:emoji:")
@@ -33,6 +34,7 @@ EXAMPLE_CONFIG = Config(
     messages=[
         MessageConfig(
             message_id=1501995003814215680,
+            channel_id=1213213213213,
             emoji_to_role={
                 "💀": 808081607239008329,
                 "☀": 708081607239008329
@@ -40,6 +42,7 @@ EXAMPLE_CONFIG = Config(
         ),
         MessageConfig(
             message_id=1502001042731176056,
+            channel_id=1213213213213,
             emoji_to_role={
                 "<:khm:880215367425851393>": 208081607239008329,
                 "<:ogoo:880215419586240572>": 508081607239008329
@@ -104,7 +107,12 @@ async def add_reactions():
     for msgc in msgs:
         mid = msgc.message_id
         logger.info(f"Adding missing reactions to message {mid}")
-        msg = bot.get_message(mid)
+        cid = msgc.channel_id
+        channel = bot.get_channel(cid)
+        if not isinstance(channel, disnake.channel.TextChannel):
+            logger.warning(f"Channel {cid} with message {mid} is not a text channel, does not exists, or bot does not have access to it. Cannot add reactions in it.")
+            continue
+        msg = await channel.fetch_message(mid)
         if not msg:
             logger.warning(
                 f"Message {mid} not found. Cannot add reactions to it.")
