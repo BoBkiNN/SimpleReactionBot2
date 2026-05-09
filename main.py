@@ -102,11 +102,11 @@ async def _add_msg_reactions(msg: disnake.Message, emojis: list[str]):
 
 
 async def add_reactions():
-    logger.info("Adding missing reactions..")
+    logger.info("Checking missing reactions..")
     msgs = bot_config.messages
     for msgc in msgs:
         mid = msgc.message_id
-        logger.info(f"Adding missing reactions to message {mid}")
+        logger.info(f"Checking missing reactions on message {mid}")
         cid = msgc.channel_id
         channel = bot.get_channel(cid)
         if not isinstance(channel, disnake.channel.TextChannel):
