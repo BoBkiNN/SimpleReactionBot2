@@ -192,6 +192,7 @@ def _setup_log():
 def main():
     global bot_config
     _setup_log()
+    logger.info("Starting..")
     try:
         cfg: Config | None = setup_config(CONFIG_PATH)
     except Exception as e:
