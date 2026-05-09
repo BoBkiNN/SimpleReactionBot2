@@ -48,7 +48,7 @@ EXAMPLE_CONFIG = Config(
 def load_config(file: Path):
     yaml = YAML(typ="safe")
     with file.open(encoding="utf-8") as f:
-        d = yaml.load_all(f)
+        d = yaml.load(f)
     return Config.model_validate(d)
 
 def save_example_config(file: Path):
